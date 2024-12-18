@@ -1,0 +1,448 @@
+---
+title: "Target prioritisation in chromatin related neurodevelopmental disorders"
+author: "Osama Arshad"
+date: "19 December 2024"
+format: 
+  revealjs:
+    slide-number: c/t
+    navigation-mode: vertical
+    controls-layout: bottom-right
+    controls-tutorial: true
+editor: visual
+engine: knitr
+---
+
+# Background
+
+## [Modelling Developmental Disorders Caused by Chromatin Deregulation]{.r-fit-text}
+
+![](img/picture1.png){fig-align="center"}
+
+## Schematic{transition="fade-in slide-out"}
+
+![](img/picture2.png){fig-align="center"}
+
+## Aims{transition="fade-in slide-out"}
+
+:::: {.fragment }
+::: {.callout-note icon="false" appearance="simple"}
+## 1. Characterising disease signatures
+
+-   Characterise the molecular profile of genetic perturbations in neuronal precursor cells (knock-outs of 40 DDD genes)
+
+:::
+::::
+
+:::: {.fragment }
+::: {.callout-note icon="false" appearance="simple"}
+## 2. Examining disease clustering
+
+-   Study the convergence of cellular phenotypes across different chromatin disorders
+:::
+::::
+
+::::: {.fragment }
+:::: {.fragment .strike}
+::: {.callout-note icon="false" appearance="simple"}
+## 3. Identifying potential therapeutic avenues
+
+-   Identify candidate therapeutic targets for DDD by comparing the effects of drugs/gene knock-outs
+:::
+::::
+:::::
+
+# 1. Characterising Disease Signatures
+
+## Platform
+
+![](img/picture3.png){fig-align="center"}
+
+## [Disorders exhibit a wide range of transcriptional dysregulation]{.r-fit-text}
+
+::: {.panel-tabset}
+
+### No. DE genes barplot
+
+```{r}
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(ggpubr)
+    library(ggrepel)
+    library(cowplot)
+    library(corrplot)
+    library(RColorBrewer)
+    library(plotly)
+    library(gganimate)
+})
+
+fdr <- 0.05
+
+sva <- "no"
+shrinkage <- "no"
+
+
+res_files <- c(
+    list.files(
+        path = "~/Documents/projects/OTAR2053/chromo-ndd/results/new_protocol/de_analysis/NPC/HT_vs_WT",
+        pattern = paste0("de_result_(.*)_HT_vs_WT_", sva, "_sva_", shrinkage, "_shrinkage.rds$"),
+        full.names = TRUE, recursive = TRUE
+    ),
+    list.files(
+        path = "~/Documents/projects/OTAR2053/chromo-ndd/results/initial_protocol/de_analysis/NPC/HT_vs_WT",
+        pattern = paste0("de_result_(.*)_HT_vs_WT_", sva, "_sva_", shrinkage, "_shrinkage.rds$"),
+        full.names = TRUE, recursive = TRUE
+    )
+)
+
+
+genelist <- names(res_files) <- sapply(strsplit(basename(res_files), "_"), "[", 3)
+
+number_de_genes <- lapply(genelist, function(gene) {
+    res <- readRDS(res_files[[gene]])
+    res |>
+        summarise(
+            total = sum(padj < fdr, na.rm = TRUE),
+            up = sum(log2FoldChange > 0 & padj < fdr, na.rm = TRUE),
+            down = sum(log2FoldChange < 0 & padj < fdr, na.rm = TRUE)
+        ) |>
+        mutate(gene = gene)
+})
+
+number_de_genes <-
+    Reduce(rbind, number_de_genes)
+
+
+#************
+# ordered barplot of num DE genes
+#************
+
+p <- number_de_genes |>
+    dplyr::select(total, gene) |>
+    ggplot(aes(x = reorder(gene, -total), y = total)) +
+    geom_bar(stat = "identity", position = position_dodge()) +
+    geom_text(aes(label = total), position = position_dodge(width = 0.9), vjust = -0.25, size = 3) +
+    ylab("Number of DE genes") +
+    ggtitle(paste0("Number of DE genes (disease models)")) +
+    theme_minimal(base_size = 16) +
+    theme(
+        plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        axis.text.x = element_text(angle = 90, hjust = 1)
+    )
+
+p
+```
+
+### Divergent barplot
+
+```{r}
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(ggpubr)
+    library(ggrepel)
+    library(cowplot)
+    library(corrplot)
+    library(RColorBrewer)
+    library(plotly)
+    library(gganimate)
+})
+
+fdr <- 0.05
+
+sva <- "no"
+shrinkage <- "no"
+
+
+res_files <- c(
+    list.files(
+        path = "~/Documents/projects/OTAR2053/chromo-ndd/results/new_protocol/de_analysis/NPC/HT_vs_WT",
+        pattern = paste0("de_result_(.*)_HT_vs_WT_", sva, "_sva_", shrinkage, "_shrinkage.rds$"),
+        full.names = TRUE, recursive = TRUE
+    ),
+    list.files(
+        path = "~/Documents/projects/OTAR2053/chromo-ndd/results/initial_protocol/de_analysis/NPC/HT_vs_WT",
+        pattern = paste0("de_result_(.*)_HT_vs_WT_", sva, "_sva_", shrinkage, "_shrinkage.rds$"),
+        full.names = TRUE, recursive = TRUE
+    )
+)
+
+
+genelist <- names(res_files) <- sapply(strsplit(basename(res_files), "_"), "[", 3)
+
+number_de_genes <- lapply(genelist, function(gene) {
+    res <- readRDS(res_files[[gene]])
+    res |>
+        summarise(
+            total = sum(padj < fdr, na.rm = TRUE),
+            up = sum(log2FoldChange > 0 & padj < fdr, na.rm = TRUE),
+            down = sum(log2FoldChange < 0 & padj < fdr, na.rm = TRUE)
+        ) |>
+        mutate(gene = gene)
+})
+
+number_de_genes <-
+    Reduce(rbind, number_de_genes)
+
+#************
+# divergent barplot of number of DE genes
+#************
+
+#---plot with divergent bars with the number of up/downregulated genes
+divergent_bar_plot_data <- number_de_genes |>
+    pivot_longer(cols = c(up, down), names_to = "category", values_to = "count") %>%
+    mutate(count = ifelse(category == "down", -count, count)) |>
+    mutate(category = fct_relevel(category, c("up", "down")))
+
+breaks_values <- pretty(divergent_bar_plot_data$count)
+
+divergent_bar_plot <-
+    divergent_bar_plot_data |>
+    ggplot(aes(x = reorder(gene, -total), y = count, fill = category)) +
+    geom_bar(stat = "identity") +
+    geom_text(
+        aes(label = count),
+        # position = position_dodge(width = 0.9),
+        vjust = ifelse(divergent_bar_plot_data$count > 0, -0.25, 1),
+        size = 3
+    ) +
+    #ggtitle(paste0("Number of DE genes (NPC disease models) - ", sva, " SVA ", shrinkage, " shrinkage")) +
+    scale_y_continuous(
+        breaks = breaks_values,
+        labels = abs(breaks_values)
+    ) +
+    scale_fill_manual(values = c("brown4", "blue4")) +
+    theme_minimal(base_size = 18) +
+    theme(
+        plot.title = element_text(hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1)
+    )
+
+divergent_bar_plot
+
+```
+
+:::
+
+# 2. Disease clustering
+
+## [Some models exhibit strongly correlated profiles]{.r-fit-text}
+
+::: {.panel-tabset}
+
+### BPRF1-KAT6A LFCs
+
+```{r}
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(SummarizedExperiment)
+    library(ggpubr)
+})
+
+sample_type <- "NPC"
+sva <- "no"
+shrinkage <- "no"
+
+# paths to DE analysis results
+lfcs <- readRDS(
+    paste0(
+        "~/Documents/projects/OTAR2053/chromo-ndd/results/joint_disease/collated_de_analysis_matrices/", sample_type, "/",
+        "lfc_matrix_", sva, "_sva_", shrinkage, "_shrinkage.rds"
+    )
+)
+
+padj <- readRDS(
+    paste0(
+        "~/Documents/projects/OTAR2053/chromo-ndd/results/joint_disease/collated_de_analysis_matrices/", sample_type, "/",
+        "padj_matrix_", sva, "_sva_", shrinkage, "_shrinkage.rds"
+    )
+)
+
+de_genes <- rownames(padj)[apply(padj, 1, function(x) any(x < fdr, na.rm = TRUE))]
+
+lfcs <- lfcs[which(rownames(lfcs) %in% de_genes), ]
+
+# create LFC scatterplot of genes 'gene1' and 'gene2' in input lfcs matrix
+lfc_scatterplot <- function(lfcs, gene1, gene2) {
+    stopifnot(c(gene1, gene2) %in% colnames(lfcs))
+
+    # correlation between LFCs of gene1 and gene2
+    lfc_cor <- cor(lfcs[, gene1], lfcs[, gene2], method = "spearman", use = "pairwise.complete.obs")
+
+    p <- lfcs |>
+        dplyr::select(dplyr::all_of(c(gene1, gene2))) |>
+        rownames_to_column("ensembl_id") |>
+        # https://ggplot2.tidyverse.org/reference/aes_.html
+        ggplot(aes(x = .data[[gene1]], y = .data[[gene2]])) +
+        geom_point(shape = ".") +
+        #ggtitle(paste0(gene1, "-", gene2, " LFCs")) +
+        geom_hline(yintercept = 0, linetype = "longdash", color = "grey") +
+        geom_vline(xintercept = 0, linetype = "longdash", color = "grey") +
+        geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dotted", linewidth = 0.5) +
+        coord_fixed(xlim = c(-4, 4), ylim = c(-4, 4)) +
+        theme_minimal(base_size = 16) +
+        theme(plot.title = element_text(hjust = 0.5), aspect.ratio = 1)
+
+    p
+}
+
+lfc_scatterplot(lfcs, "BRPF1", "KAT6A")
+```
+
+### SPEN-TBL1XR1 LFCs
+
+```{r}
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(SummarizedExperiment)
+    library(ggpubr)
+})
+
+sample_type <- "NPC"
+sva <- "no"
+shrinkage <- "no"
+
+# paths to DE analysis results
+lfcs <- readRDS(
+    paste0(
+        "~/Documents/projects/OTAR2053/chromo-ndd/results/joint_disease/collated_de_analysis_matrices/", sample_type, "/",
+        "lfc_matrix_", sva, "_sva_", shrinkage, "_shrinkage.rds"
+    )
+)
+
+padj <- readRDS(
+    paste0(
+        "~/Documents/projects/OTAR2053/chromo-ndd/results/joint_disease/collated_de_analysis_matrices/", sample_type, "/",
+        "padj_matrix_", sva, "_sva_", shrinkage, "_shrinkage.rds"
+    )
+)
+
+de_genes <- rownames(padj)[apply(padj, 1, function(x) any(x < fdr, na.rm = TRUE))]
+
+lfcs <- lfcs[which(rownames(lfcs) %in% de_genes), ]
+
+# create LFC scatterplot of genes 'gene1' and 'gene2' in input lfcs matrix
+lfc_scatterplot <- function(lfcs, gene1, gene2) {
+    stopifnot(c(gene1, gene2) %in% colnames(lfcs))
+
+    # correlation between LFCs of gene1 and gene2
+    lfc_cor <- cor(lfcs[, gene1], lfcs[, gene2], method = "spearman", use = "pairwise.complete.obs")
+
+    p <- lfcs |>
+        dplyr::select(dplyr::all_of(c(gene1, gene2))) |>
+        rownames_to_column("ensembl_id") |>
+        # https://ggplot2.tidyverse.org/reference/aes_.html
+        ggplot(aes(x = .data[[gene1]], y = .data[[gene2]])) +
+        geom_point(shape = ".") +
+        #ggtitle(paste0(gene1, "-", gene2, " LFCs")) +
+        geom_hline(yintercept = 0, linetype = "longdash", color = "grey") +
+        geom_vline(xintercept = 0, linetype = "longdash", color = "grey") +
+        geom_smooth(method = "lm", se = FALSE, color = "black", linetype = "dotted", linewidth = 0.5) +
+        coord_fixed(xlim = c(-4, 4), ylim = c(-4, 4)) +
+        theme_minimal(base_size = 16) +
+        theme(plot.title = element_text(hjust = 0.5), aspect.ratio = 1)
+
+    p
+}
+lfc_scatterplot(lfcs, "SPEN", "TBL1XR1")
+
+```
+
+:::
+
+## [Clustering of disease signatures on the correlation of their transcriptomic profiles indicates convergent patterns of dysregulation for some models]{.r-fit-text}
+
+```{r, fig.align='center'}
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(readxl)
+    library(magrittr)
+    library(SummarizedExperiment)
+    library(textshape)
+    library(data.table)
+    library(corrplot)
+    library(pheatmap)
+    library(RColorBrewer)
+    library(heatmaply)
+})
+
+fdr <- 0.05
+
+sample_type <- "NPC"
+sva <- "no"
+shrinkage <- "no"
+
+# use all genes or just DE genes
+genes_to_use <- "de"
+
+# mapping of genes to functional classes
+target_gene_classification <- readRDS("~/Documents/projects/OTAR2053/chromo-ndd/data/processed/target_gene_classification/target_gene_classification.rds")
+
+# paths to DE analysis results
+sig_mat <- readRDS(
+    paste0(
+        "~/Documents/projects/OTAR2053/chromo-ndd/results/joint_disease/collated_de_analysis_matrices/", sample_type, "/",
+        "lfc_matrix_", sva, "_sva_", shrinkage, "_shrinkage.rds"
+    )
+)
+
+padj_mat <- readRDS(
+    paste0(
+        "~/Documents/projects/OTAR2053/chromo-ndd/results/joint_disease/collated_de_analysis_matrices/", sample_type, "/",
+        "padj_matrix_", sva, "_sva_", shrinkage, "_shrinkage.rds"
+    )
+)
+
+# if genes_to_use == "all" use all genes as input, if genes_to_use == "de" use union of DE genes acroos lines
+if (genes_to_use == "de") {
+    de_genes <- rownames(padj_mat)[apply(padj_mat, 1, function(x) any(x < fdr, na.rm = TRUE))]
+
+    sig_mat <- sig_mat[which(rownames(sig_mat) %in% de_genes), ]
+}
+
+# cor matrix of signatures
+cor_sig <- cor(sig_mat, method = "spearman", use = "pairwise.complete.obs")
+
+anno_df <- colnames(cor_sig) |>
+    enframe(value = "id") |>
+    select(-name) |>
+    mutate(class = target_gene_classification$short_version[match(id, target_gene_classification$gene)]) |>
+    mutate(id = ifelse(is.na(class), id, str_c(id, " (", class, ")"))) |>
+    textshape::column_to_rownames("id") |>
+    as.data.frame()
+
+# plot heatmap of correlation between signatures
+dist_matrix <- as.dist(1 - cor_sig)
+
+# https://landau1994.github.io/2020/04/20/pheatmap_advanced/
+colors <- colorRampPalette(c("red", "white", "blue"))(50)
+breaks <- seq(-1, 1, length.out = length(colors) + 1)
+
+hm <- pheatmap(cor_sig,
+    clustering_distance_rows = dist_matrix,
+    clustering_distance_cols = dist_matrix,
+    col = colors,
+    breaks = breaks,
+    labels_row = labels(dist_matrix),
+    labels_col = labels(dist_matrix),
+    #annotation_row = anno_df,
+    #annotation_col = anno_df,
+    annotation_legend = FALSE,
+    main = "Disease signatures correlation clustering",
+    fontsize_row = 7, fontsize_col = 7,
+    silent = TRUE,
+)
+
+heatmaply(cor_sig, limits = c(-1, 1), colors = colors, Rowv = hm$tree_row, Colv = hm$tree_col,
+          width = "650", height = "650",
+          main = "Disease signatures correlation clustering",
+          cexCol = 0.8, cexRow = 0.8,
+          symm = TRUE,
+          column_text_angle = 90,
+          dendogram = "none")
+
+```
