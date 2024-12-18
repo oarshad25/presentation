@@ -4,6 +4,7 @@ author: "Osama Arshad"
 date: "19 December 2024"
 format: 
   revealjs:
+    transition: slide
     slide-number: c/t
     navigation-mode: vertical
     controls-layout: bottom-right
@@ -12,17 +13,17 @@ editor: visual
 engine: knitr
 ---
 
-# Background
+# Background {background-color="skyblue"}
 
 ## [Modelling Developmental Disorders Caused by Chromatin Deregulation]{.r-fit-text}
 
 ![](img/picture1.png){fig-align="center"}
 
-## Schematic{transition="fade-in slide-out"}
+## Schematic
 
 ![](img/picture2.png){fig-align="center"}
 
-## Aims{transition="fade-in slide-out"}
+## Aims
 
 :::: {.fragment }
 ::: {.callout-note icon="false" appearance="simple"}
@@ -51,7 +52,7 @@ engine: knitr
 ::::
 :::::
 
-# 1. Characterising Disease Signatures
+# Characterising Disease Signatures {background-color="skyblue"}
 
 ## Platform
 
@@ -228,7 +229,7 @@ divergent_bar_plot
 
 :::
 
-# 2. Disease clustering
+# Disease clustering {background-color="skyblue"}
 
 ## [Some models exhibit strongly correlated profiles]{.r-fit-text}
 
@@ -293,7 +294,7 @@ lfc_scatterplot <- function(lfcs, gene1, gene2) {
 lfc_scatterplot(lfcs, "BRPF1", "KAT6A")
 ```
 
-### SPEN-TBL1XR1 LFCs
+### ASXL2-MBD5 LFCs
 
 ```{r}
 suppressPackageStartupMessages({
@@ -348,7 +349,7 @@ lfc_scatterplot <- function(lfcs, gene1, gene2) {
 
     p
 }
-lfc_scatterplot(lfcs, "SPEN", "TBL1XR1")
+lfc_scatterplot(lfcs, "ASXL2", "MBD5")
 
 ```
 
@@ -446,3 +447,69 @@ heatmaply(cor_sig, limits = c(-1, 1), colors = colors, Rowv = hm$tree_row, Colv 
           dendogram = "none")
 
 ```
+
+## [Some observed inter-disease relationships are explained by protein protein interactions]{.r-fit-text}
+
+```{r}
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(ggrepel)
+})
+
+sample_type <- "NPC"
+sva <- "no"
+shrinkage <- "no"
+
+df_interactions <- readRDS(paste0(
+        "~/Documents/projects/OTAR2053/chromo-ndd/",
+        "results/joint_disease/stringdb_analysis/",
+        sample_type, "/", sva, "_sva_", shrinkage, "_shrinkage/",
+        "plot_data.rds"
+    ))
+
+stringdb_plot <- df_interactions |>
+    mutate(label = ifelse(combined_score > 400 & abs(correlation) > 0.3, label, "")) |>
+    ggplot(aes(x = combined_score, y = correlation)) +
+    geom_point() +
+    geom_text_repel(aes(label = label)) +
+    geom_hline(yintercept = 0, linetype = "longdash", color = "grey") +
+    geom_hline(yintercept = c(0.3, -0.3), linetype = "longdash", color = "blue") +
+    geom_vline(xintercept = 400, linetype = "longdash", color = "red") +
+    labs(
+        title = "Gene pair signature correlation vs STRING interaction score",
+        x = "STRING combined score",
+        y = "Correlation of signatures"
+    ) +
+    theme_classic(base_size = 16) +
+    theme(plot.title = element_text(hjust = 0.5))
+
+stringdb_plot
+```
+
+# Skills {background-color="skyblue"}
+
+## Timeline
+
+![](img/picture4.png){fig-align="center"}
+
+## Relevant Skills
+
+::: {.fragment .fade-in}
+Lead/core analyst on multiple large scale collaborative projects 
+:::
+
+::: {.fragment .fade-up}
+Direct experience of analysis of omic data sets from disease models in neuroscience
+:::
+
+::: {.fragment .fade-up}
+Extensive collaboration with wet-lab biologists
+:::
+
+::: {.fragment .fade-up}
+Several highly cited co-first author publications in functional genomics
+:::
+
+::: {.fragment .fade-up}
+Extensive experience with R and Bioconductor
+:::
